@@ -18,11 +18,11 @@ Delivery target: macOS Apple Silicon (ARM64). This is an independent beta, not a
 - Actual city-widget input handlers and placement preview exercised in the engine harness; no operating-system input automation was required.
 - Rendered four map orientations at 75% and 150% scale, plus composite buildings in all orientations and a separate preview capture. Selected images were visually inspected.
 - Updater tested against disposable local Git remotes: clean merge, repeat, no changes and conflicting merge. Every case preserved the working branch; conflicts produced a report and aborted safely.
-- Packaged application checked for ARM64 architecture, bundled dependencies and ad-hoc signature. The original installed application's executable checksum was unchanged. The private input save copy also retained its original checksum; test outputs went to separate scratch directories.
+- Packaged application checked for ARM64 architecture, bundled dependencies and ad-hoc signature, then launched headlessly with no external library-path override. Packaging preserves upstream's library-validation entitlement, needed for the bundled ad-hoc-signed SDL frameworks. The original installed application's executable checksum was unchanged. The private input save copy also retained its original checksum; test outputs went to separate scratch directories.
 
 ## GitHub checks
 
-Model/storage regression passed on GitHub Linux. The first upstream check prepared a clean candidate against official `master`; it did not advance `feature/planning-mode`. macOS 14 jobs remained queued and were cancelled in favor of the macOS 15 configuration. Check the latest **Planning Mode builds** and **Check official Augustus updates** runs for final cloud build results.
+Model/storage and updater regression passed on GitHub Linux. The first upstream check prepared a clean candidate against official `master`; it did not advance `feature/planning-mode`. Native macOS 14/15 jobs remained queued. The workflow therefore uses a supported Intel Mac runner with universal SDL frameworks to produce an explicitly verified ARM64 binary; native ARM64 runtime tests run locally. Check the latest **Planning Mode builds** and **Check official Augustus updates** runs for final cloud build results.
 
 ## Known limitations and inherited diagnostics
 

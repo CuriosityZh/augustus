@@ -12,9 +12,9 @@ if [[ -e "$app" ]]; then
 fi
 ditto "$build_dir/augustus.app" "$app"
 cp LICENSE.txt "$app/Contents/Resources/LICENSE-Augustus.txt"
-cp docs/planning/README.ru.md "$app/Contents/Resources/Planning-README.ru.md"
-cp docs/planning/VALIDATION.md "$app/Contents/Resources/Planning-VALIDATION.md"
-codesign --force --deep --options runtime --timestamp=none --sign - "$app"
+ditto docs/planning "$app/Contents/Resources/PlanningDocs"
+codesign --force --deep --options runtime --timestamp=none --sign - \
+    --entitlements res/macos/Entitlements.plist "$app"
 codesign --verify --deep --strict "$app"
 file "$app/Contents/MacOS/augustus" | tee "$destination/architecture.txt"
 lipo "$app/Contents/MacOS/augustus" -verify_arch arm64

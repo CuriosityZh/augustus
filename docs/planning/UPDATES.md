@@ -8,7 +8,7 @@ The fork's **Check official Augustus updates** workflow runs daily at 03:15 UTC 
 2. If upstream is already integrated, report no changes.
 3. Otherwise prepare `updates/upstream-<official SHA>-<working SHA>` by a regular merge. Never rebase, reset or force-push the working version.
 4. On conflicts, abort the merge and upload `upstream-compatibility-report` listing the affected files. The workflow fails visibly in Actions.
-5. A clean candidate is compiled for native macOS ARM64. Model/storage tests run with AddressSanitizer and UndefinedBehaviorSanitizer on Linux and ARM64 macOS. The engine regression harness also compiles, so API integration failures are detected.
+5. A clean candidate is cross-compiled for macOS ARM64 on a Mac runner with universal SDL frameworks. Model/storage tests run with AddressSanitizer and UndefinedBehaviorSanitizer on Linux and the macOS build host. The engine regression harness also compiles, so API integration failures are detected.
 6. Download the candidate application from that run's artifacts. Proprietary Caesar III assets and personal saves are not uploaded to GitHub, so full engine runtime/visual checks require a local test installation.
 
 No candidate is promoted automatically. Only after successful checks and a local play/visual check should the working branch advance. A maintainer can use:
