@@ -14,7 +14,7 @@ ditto "$build_dir/augustus.app" "$app"
 codesign --force --deep --options runtime --timestamp=none --sign - "$app"
 codesign --verify --deep --strict "$app"
 file "$app/Contents/MacOS/augustus" | tee "$destination/architecture.txt"
-lipo -verify_arch arm64 "$app/Contents/MacOS/augustus"
+lipo "$app/Contents/MacOS/augustus" -verify_arch arm64
 # Reject accidental references to a developer's Homebrew or original app.
 if otool -L "$app/Contents/MacOS/augustus" | grep -E '/opt/homebrew|/usr/local|/Applications/augustus'; then
     echo 'Bundle still refers to external build dependencies' >&2
