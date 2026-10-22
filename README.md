@@ -1,3 +1,13 @@
+# Augustus + Planning Mode
+
+Independent Apple Silicon build with persistent city blueprints. Based on upstream Augustus 4.0.0.
+
+**[Инструкция на русском](docs/planning/README.ru.md)** · [Updates](docs/planning/UPDATES.md) · [Architecture](docs/planning/ARCHITECTURE.md) · [Validation](docs/planning/VALIDATION.md)
+
+The official project is [Keriew/augustus](https://github.com/Keriew/augustus). This fork does not represent an official Augustus release.
+
+---
+
 # Augustus ![](res/julius_48.png)
 
 [![Github Actions](https://github.com/Keriew/augustus/workflows/Build%20Augustus/badge.svg)](https://github.com/Keriew/Augustus/actions)

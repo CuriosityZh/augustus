@@ -9,6 +9,7 @@ on:
 
 jobs:
   build:
+    if: github.repository == 'Keriew/augustus'
     strategy:
       fail-fast: false
       matrix:
@@ -151,6 +152,7 @@ jobs:
           name: ${{ matrix.name }}
           path: deploy/
   windows:
+    if: github.repository == 'Keriew/augustus'
     strategy:
       fail-fast: false
       matrix:

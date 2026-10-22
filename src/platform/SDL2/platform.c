@@ -127,7 +127,7 @@ const char *platform_get_pref_path(void)
 #if SDL_VERSION_ATLEAST(2, 0, 1)
     static const char *pref_path;
     if (!pref_path && platform_sdl_version_at_least(2, 0, 1)) {
-        pref_path = SDL_GetPrefPath("augustus", "augustus");
+        pref_path = SDL_GetPrefPath("augustus-planning", "augustus-planning");
     }
     return pref_path;
 #endif

@@ -1,5 +1,6 @@
 #include "draw.h"
 
+#include "planning/planning.h"
 #include "assets/assets.h"
 #include "building/animation.h"
 #include "building/connectable.h"
@@ -1333,6 +1334,18 @@ static void update_clouds(void)
     clouds_draw(camera_x, camera_y, GRID_SIZE * 60, GRID_SIZE * 30, draw_context.scale);
 }
 
+static void draw_footprint_with_plans(int x, int y, int offset)
+{
+    draw_footprint(x, y, offset);
+    planning_draw_footprint(x, y, offset);
+}
+
+static void draw_top_with_plans(int x, int y, int offset)
+{
+    planning_draw_top(x, y, offset);
+    draw_top(x, y, offset);
+}
+
 void city_draw(int selected_figure_id, pixel_coordinate *figure_coord, const map_tile *tile, unsigned int roamer_preview_building_id)
 {
     int highlighted_formation_id = get_highlighted_formation_id(tile);
@@ -1346,10 +1359,11 @@ void city_draw(int selected_figure_id, pixel_coordinate *figure_coord, const map
     city_view_get_viewport(&x, &y, &width, &height);
     graphics_fill_rect(x, y, width, height, COLOR_BLACK);
     int should_mark_deleting = city_building_ghost_mark_deleting(tile);
-    city_view_foreach_valid_map_tile(draw_footprint);
+    planning_prepare_draw();
+    city_view_foreach_valid_map_tile(draw_footprint_with_plans);
     if (!should_mark_deleting) {
         city_view_foreach_valid_map_tile_row(
-            draw_top,
+            draw_top_with_plans,
             draw_figures,
             draw_animation
         );
@@ -1368,6 +1382,7 @@ void city_draw(int selected_figure_id, pixel_coordinate *figure_coord, const map
             0
         );
     } else {
+        city_view_foreach_valid_map_tile(planning_draw_top);
         city_view_foreach_valid_map_tile(deletion_draw_terrain_top);
         city_view_foreach_valid_map_tile(deletion_draw_figures_animations);
         city_view_foreach_valid_map_tile(deletion_draw_remaining);

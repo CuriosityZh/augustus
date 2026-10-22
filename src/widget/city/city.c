@@ -1,5 +1,6 @@
 #include "city.h"
 
+#include "planning/planning.h"
 #include "building/construction.h"
 #include "building/properties.h"
 #include "building/rotation.h"
@@ -108,6 +109,9 @@ void widget_city_draw_for_figure(int figure_id, pixel_coordinate *coord)
 
 void widget_city_draw_construction_cost_and_size(void)
 {
+    if (planning_enabled()) {
+        return;
+    }
     if (scroll_in_progress()) {
         return;
     }
@@ -228,6 +232,7 @@ static void draw_construction_buttons(void)
 
 void widget_city_draw_construction_buttons(void)
 {
+    planning_draw_controls();
     if (!sidebar_extra_is_information_displayed(SIDEBAR_EXTRA_DISPLAY_GAME_SPEED)) {
         draw_pause_button();
     }
@@ -614,6 +619,9 @@ static void handle_mouse(const mouse *m)
 {
     map_tile *tile = &data.current_tile;
     update_city_view_coords(m->x, m->y, tile);
+    if (planning_mouse(m, tile)) {
+        return;
+    }
     building_construction_reset_draw_as_constructing();
     if (m->left.went_down) {
         if (handle_legion_click(tile)) {

@@ -79,7 +79,7 @@ if (POLICY CMP0141)
 endif()
 
 set(SHORT_NAME augustus)
-set(USER_FRIENDLY_NAME Augustus)
+set(USER_FRIENDLY_NAME "Augustus Planning")
 project(${SHORT_NAME} C)
 
 if (NINTENDO_SWITCH)
@@ -825,6 +825,10 @@ if(${TARGET_PLATFORM} STREQUAL "emscripten")
 endif()
 
 set(SOURCE_FILES
+    ${PROJECT_SOURCE_DIR}/src/planning/model.c
+    ${PROJECT_SOURCE_DIR}/src/planning/sha256.c
+    ${PROJECT_SOURCE_DIR}/src/planning/storage.c
+    ${PROJECT_SOURCE_DIR}/src/planning/planning.c
     ${PLATFORM_FILES}
     ${CORE_FILES}
     ${BUILDING_FILES}
@@ -958,7 +962,7 @@ if(APPLE AND NOT ${TARGET_PLATFORM} STREQUAL "ios")
         MACOSX_PACKAGE_LOCATION "Resources")
 
     # setting variables that will populate Info.plist
-    set(MACOSX_BUNDLE_GUI_IDENTIFIER "pl.Keriew.augustus")
+    set(MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.CuriosityZh.augustus-planning")
     set(MACOSX_BUNDLE_BUNDLE_NAME ${USER_FRIENDLY_NAME})
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum OS X deployment version" FORCE)
     set(MACOSX_BUNDLE_ICON_FILE "augustus.icns")
@@ -993,7 +997,7 @@ if(APPLE AND NOT ${TARGET_PLATFORM} STREQUAL "ios")
     # bundle and links the binary against them
     install(CODE "
         include(BundleUtilities)
-        fixup_bundle(${CMAKE_BINARY_DIR}/${PROJECT_NAME}.app \"${LIBS}\" \"${DIRS}\")
+        fixup_bundle(\"${CMAKE_BINARY_DIR}/${PROJECT_NAME}.app\" \"${LIBS}\" \"${DIRS}\")
     " BUNDLE DESTINATION ${CMAKE_BINARY_DIR})
 
     # perform ad-hoc codesigning
@@ -1172,4 +1176,17 @@ else()
         install(DIRECTORY "${ASSETS_DIR}/" DESTINATION "share/augustus-game/assets")
     endif()
 
+endif()
+
+# Optional developer harness. Requires the user's Caesar III assets at runtime;
+# proprietary data and personal saves are never checked into the repository.
+option(PLANNING_ENGINE_TESTS "Build Planning Mode engine regression harness (SDL2)" OFF)
+if(PLANNING_ENGINE_TESTS AND SDL_VERSION STREQUAL "2")
+    set(PLANNING_ENGINE_SOURCES ${SOURCE_FILES})
+    list(FILTER PLANNING_ENGINE_SOURCES INCLUDE REGEX "\\.c$")
+    list(REMOVE_ITEM PLANNING_ENGINE_SOURCES "${PROJECT_SOURCE_DIR}/src/platform/SDL2/augustus.c")
+    list(REMOVE_ITEM PLANNING_ENGINE_SOURCES "${PROJECT_SOURCE_DIR}/src/game/file_io.c")
+    add_executable(planning-engine-tests tests/planning/test_engine.c tests/planning/test_engine_snapshot.c ${PLANNING_ENGINE_SOURCES})
+    get_target_property(PLANNING_ENGINE_LIBS augustus LINK_LIBRARIES)
+    target_link_libraries(planning-engine-tests PRIVATE ${PLANNING_ENGINE_LIBS})
 endif()

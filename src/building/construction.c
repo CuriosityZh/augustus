@@ -1,5 +1,6 @@
 #include "construction.h"
 
+#include "planning/planning.h"
 #include "assets/assets.h"
 #include "building/building.h"
 #include "building/connectable.h"
@@ -754,6 +755,10 @@ int building_construction_in_progress(void)
 
 void building_construction_start(int x, int y, int grid_offset)
 {
+    if (planning_enabled()) {
+        return;
+    }
+    planning_before_construction();
     if (data.type == BUILDING_HIGHWAY) {
         building_construction_offset_start_from_orientation(&x, &y, 2);
         grid_offset = map_grid_offset(x, y);
@@ -897,6 +902,9 @@ static int auto_clear_handled_by_explicit_branch(building_type type)
 
 void building_construction_update(int x, int y, int grid_offset)
 {
+    if (planning_enabled()) {
+        return;
+    }
     building_type type = building_construction_type();
     if (grid_offset) {
         if (type == BUILDING_HIGHWAY) {
@@ -1188,6 +1196,9 @@ static unsigned int remove_aqueduct_tiles_for_reservoir(int x, int y)
 
 void building_construction_place(void)
 {
+    if (planning_enabled()) {
+        return;
+    }
     data.cost_preview = 0;
     data.in_progress = 0;
     int x_start = data.start.x;
@@ -1387,6 +1398,9 @@ void building_construction_place(void)
     city_finance_process_construction(placement_cost);
     building_construction_auto_clear_finalize();
     game_undo_finish_build(placement_cost);
+    if (type != BUILDING_CLEAR_LAND && type != BUILDING_REPAIR_LAND) {
+        planning_after_construction();
+    }
 }
 
 static void set_warning(int *warning_id, int warning)

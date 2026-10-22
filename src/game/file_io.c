@@ -1,5 +1,6 @@
 #include "file_io.h"
 
+#include "planning/planning.h"
 #include "building/barracks.h"
 #include "building/count.h"
 #include "building/granary.h"
@@ -1980,8 +1981,14 @@ int game_file_io_write_saved_game(const char *filename)
     savegame_write_to_file(fp, &compress_buffer);
     core_memory_block_free(&compress_buffer);
     clear_savegame_pieces();
-    file_close(fp);
-    return 1;
+    int save_ok = !ferror(fp);
+    if (!file_close(fp)) {
+        save_ok = 0;
+    }
+    if (save_ok) {
+        planning_save(filename);
+    }
+    return save_ok;
 }
 
 int game_file_io_delete_saved_game(const char *filename)

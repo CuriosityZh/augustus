@@ -58,3 +58,10 @@ ext/SDL2/*.zip
 ext/SDL2/*.tar.gz
 
 res/augustus.icns
+
+# Independent Planning Mode outputs and personal fixtures
+/build-planning*/
+/dist*/
+/qa-planning/
+/update-report.txt
+*.svx.planning

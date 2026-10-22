@@ -1,5 +1,6 @@
 #include "city.h"
 
+#include "planning/planning.h"
 #include "building/clone.h"
 #include "building/construction.h"
 #include "building/data_transfer.h"
@@ -840,7 +841,11 @@ static void handle_hotkeys(const hotkeys *h)
         set_construction_building_type(h->building, 0);
     }
     if (h->undo) {
-        game_undo_perform();
+        if (planning_enabled()) {
+            planning_undo();
+        } else {
+            game_undo_perform();
+        }
         window_invalidate();
     }
     if (h->mothball_toggle) {

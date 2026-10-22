@@ -1,0 +1,64 @@
+name: Planning Mode builds
+on:
+  push:
+    branches: ['feature/planning-mode', 'updates/**']
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact candidate commit to build
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  core-tests:
+    name: Model and companion regression (sanitizers)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - run: cmake -S tests/planning -B build-tests -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake --build build-tests --parallel 2
+      - run: ctest --test-dir build-tests --output-on-failure
+  macos-arm64:
+    name: macOS Apple Silicon bundle
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+      - name: Verify native Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+      - name: Install build dependencies
+        run: brew install cmake ninja sdl2 sdl2_mixer
+      - name: Configure
+        run: >-
+          cmake -S . -B build-planning -G Ninja
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+          -DPLANNING_ENGINE_TESTS=ON
+      - name: Compile game and engine regression harness
+        run: cmake --build build-planning --parallel 3
+      - name: Run portable regression tests on ARM64
+        run: |
+          cmake -S tests/planning -B build-tests -G Ninja
+          cmake --build build-tests --parallel 3
+          ctest --test-dir build-tests --output-on-failure
+      - name: Package independent application
+        run: scripts/planning/package-macos.sh build-planning dist
+      - name: Record exact source revision
+        run: |
+          git rev-parse HEAD > dist/SOURCE_COMMIT.txt
+          cp docs/planning/README.ru.md dist/INSTALL.ru.md
+          cp docs/planning/TESTING.md dist/TESTING.md
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Augustus-Planning-macOS-arm64-${{ inputs.ref || github.sha }}
+          path: |
+            dist/*.zip
+            dist/*.txt
+            dist/*.md
+            dist/SHA256SUMS
+          retention-days: 90

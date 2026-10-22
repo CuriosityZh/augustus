@@ -1,0 +1,57 @@
+name: Check official Augustus updates
+on:
+  schedule:
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: planning-upstream-check
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.repository == 'CuriosityZh/augustus'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      candidate: ${{ steps.merge.outputs.candidate }}
+      branch: ${{ steps.merge.outputs.branch }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feature/planning-mode
+          fetch-depth: 0
+      - name: Prepare an isolated update candidate
+        id: merge
+        run: scripts/planning/prepare-upstream-update.sh
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: upstream-compatibility-report
+          path: update-report.txt
+          if-no-files-found: warn
+  validate:
+    needs: prepare
+    if: needs.prepare.outputs.candidate != ''
+    uses: ./.github/workflows/planning-build.yml
+    with:
+      ref: ${{ needs.prepare.outputs.candidate }}
+  report:
+    needs: [prepare, validate]
+    if: always() && needs.prepare.outputs.candidate != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report candidate validation
+        env:
+          CANDIDATE_BRANCH: ${{ needs.prepare.outputs.branch }}
+          CANDIDATE_SHA: ${{ needs.prepare.outputs.candidate }}
+          VALIDATION: ${{ needs.validate.result }}
+        run: |
+          {
+            echo "Candidate: $CANDIDATE_BRANCH"
+            echo "Commit: $CANDIDATE_SHA"
+            echo "Build/tests: $VALIDATION"
+            echo "Working branch and previous release remain unchanged."
+            echo "For a successful candidate, download the ARM64 artifact and follow docs/planning/UPDATES.md."
+          } >> "$GITHUB_STEP_SUMMARY"

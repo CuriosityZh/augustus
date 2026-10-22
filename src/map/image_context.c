@@ -535,3 +535,17 @@ const terrain_image *map_image_context_get_aqueduct(int grid_offset, int include
     set_terrain_reservoir(grid_offset, 6, EDGE_X2Y1, tiles, include_construction);
     return get_image(CONTEXT_AQUEDUCT, tiles);
 }
+
+/* Planning must not advance the real terrain context's variant counters. */
+int map_image_context_planning_offset(int terrain, const int tiles[8])
+{
+    int group = terrain == TERRAIN_WALL ? CONTEXT_WALL :
+        terrain == TERRAIN_ROAD ? CONTEXT_DIRT_ROAD : CONTEXT_AQUEDUCT;
+    const struct terrain_image_context *context = context_pointers[group].context;
+    for (int i = 0; i < context_pointers[group].size; ++i) {
+        if (context_matches_tiles(context + i, tiles)) {
+            return context[i].offset_for_orientation[city_view_orientation() / 2];
+        }
+    }
+    return 0;
+}

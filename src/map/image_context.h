@@ -22,4 +22,6 @@ const terrain_image *map_image_context_get_dirt_road(int grid_offset);
 const terrain_image *map_image_context_get_paved_road(int grid_offset);
 const terrain_image *map_image_context_get_aqueduct(int grid_offset, int include_construction);
 
+int map_image_context_planning_offset(int terrain, const int tiles[8]);
+
 #endif // MAP_IMAGE_CONTEXT_H

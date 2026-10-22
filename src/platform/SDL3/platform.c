@@ -122,7 +122,7 @@ const char *platform_get_pref_path(void)
 {
     static const char *pref_path;
     if (!pref_path) {
-        pref_path = SDL_GetPrefPath("augustus", "augustus");
+        pref_path = SDL_GetPrefPath("augustus-planning", "augustus-planning");
     }
     return pref_path;
 }

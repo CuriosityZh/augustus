@@ -1,5 +1,6 @@
 #include "building_ghost.h"
 
+#include "planning/planning.h"
 #include "assets/assets.h"
 #include "building/connectable.h"
 #include "building/construction.h"
@@ -1423,6 +1424,9 @@ static void draw_concrete_maker(const map_tile *tile, int x, int y)
 
 int city_building_ghost_mark_deleting(const map_tile *tile)
 {
+    if (planning_enabled()) {
+        return 0;
+    }
     int construction_type = building_construction_type();
     int is_land_work = (construction_type == BUILDING_CLEAR_LAND || construction_type == BUILDING_REPAIR_LAND);
     if (!is_land_work) {    // bail out early if not a land-work type
@@ -1557,6 +1561,9 @@ void draw_hippodrome_desirability(const map_tile *tile)
 
 const city_overlay *city_building_ghost_get_overlay(void)
 {
+    if (planning_enabled()) {
+        return 0;
+    }
     building_type type = building_construction_type();
 
     int show_reservoir_range = config_get(CONFIG_UI_BUILD_SHOW_RESERVOIR_RANGES);
@@ -1582,6 +1589,10 @@ const city_overlay *city_building_ghost_get_overlay(void)
 
 void city_building_ghost_draw(const map_tile *tile)
 {
+    if (planning_enabled()) {
+        planning_draw_preview(tile);
+        return;
+    }
     if (!tile->grid_offset || scroll_in_progress()) {
         return;
     }

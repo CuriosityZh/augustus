@@ -81,7 +81,13 @@ void pref_save_data_dir(const char *data_dir)
 
 const char *pref_user_dir(void)
 {
-    return retrieve_directory(&prefs.user);
+    const char *override = getenv("AUGUSTUS_PLANNING_USER_DIR");
+    if (override && *override) {
+        return override;
+    }
+    const char *saved = retrieve_directory(&prefs.user);
+    const char *recommended = platform_get_pref_path();
+    return *saved ? saved : (recommended ? recommended : "");
 }
 
 void pref_save_user_dir(const char *user_dir)

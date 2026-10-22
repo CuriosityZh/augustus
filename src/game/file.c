@@ -1,5 +1,6 @@
 #include "file.h"
 
+#include "planning/planning.h"
 #include "building/construction.h"
 #include "building/granary.h"
 #include "building/maintenance.h"
@@ -103,6 +104,7 @@ static const char MISSION_SAVED_GAMES[][32] = {
 
 static void clear_scenario_data(void)
 {
+    planning_reset();
     // clear data
     city_victory_reset();
     building_construction_clear_type();
@@ -279,6 +281,7 @@ static void check_backward_compatibility(void)
 
 static void initialize_saved_game(void)
 {
+    planning_reset();
     load_empire_data(!game_campaign_is_original(), scenario_empire_id());
     if (resource_mapping_get_version() < RESOURCE_SEPARATE_FISH_AND_MEAT_VERSION) {
         empire_city_update_our_fish_and_meat_production();
@@ -471,6 +474,7 @@ int game_file_load_saved_game(const char *filename)
     check_backward_compatibility();
     initialize_saved_game();
     building_storage_reset_building_ids();
+    planning_load(filename);
 
     sound_music_update(1);
     return 1;
@@ -559,7 +563,9 @@ int game_file_make_yearly_autosave(void)
         platform_file_manager_get_directory_for_location(PATH_LOCATION_SAVEGAME, 0), "autosave-year-bak-",
         next_autosave_slot, ".svx");
 
-    platform_file_manager_copy_file(current_save_name, backup_save_name);
+    if (platform_file_manager_copy_file(current_save_name, backup_save_name)) {
+        planning_copy(current_save_name, backup_save_name);
+    }
     int result = game_file_write_saved_game(current_save_name);
 
     next_autosave_slot++;

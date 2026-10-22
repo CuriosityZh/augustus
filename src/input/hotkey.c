@@ -1,5 +1,6 @@
 #include "hotkey.h"
 
+#include "planning/planning.h"
 #include "building/type.h"
 #include "city/constants.h"
 #include "empire/editor.h"
@@ -664,6 +665,9 @@ void hotkey_key_pressed(key_type key, key_modifier_type modifiers, int repeat)
 
     if (window_is(WINDOW_HOTKEY_EDITOR)) {
         window_hotkey_editor_key_pressed(key, modifiers);
+        return;
+    }
+    if (window_is(WINDOW_CITY) && planning_key(key, modifiers, repeat)) {
         return;
     }
     if (key == KEY_TYPE_NONE) {
