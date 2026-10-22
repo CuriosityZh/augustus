@@ -6,15 +6,22 @@
 #include "building/construction.h"
 #include "building/properties.h"
 #include "building/rotation.h"
+#include "building/variant.h"
 #include "city/finance.h"
 #include "city/view.h"
+#include "city/warning.h"
+#include "core/config.h"
+#include "core/dir.h"
 #include "core/file.h"
+#include "core/string.h"
+#include "game/campaign.h"
 #include "game/file.h"
 #include "game/file_io.h"
 #include "game/state.h"
 #include "graphics/graphics.h"
 #include "graphics/renderer.h"
 #include "graphics/screenshot.h"
+#include "map/bridge.h"
 #include "map/building.h"
 #include "map/data.h"
 #include "map/terrain.h"
@@ -23,8 +30,11 @@
 #include "planning/sha256.h"
 #include "planning/storage.h"
 #include "platform/user_path.h"
+#include "scenario/scenario.h"
+#include "widget/city/city.h"
 #include "window/city.h"
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 #define VERIFY(x)                                                                                            \
     do {                                                                                                     \
@@ -104,14 +114,29 @@ static void test_save(const char* name, uint8_t hash[32])
 }
 static void test_screenshot(const char* name)
 {
+    city_warning_clear_all();
     game_draw();
     graphics_save_screenshot(SCREENSHOT_DISPLAY);
+    const char* dir = platform_file_manager_get_directory_for_location(PATH_LOCATION_SCREENSHOT, 0);
+    char source[1600], target[1600], timestamp[100];
+    snprintf(target, sizeof(target), "%s%s.png", dir, name);
+    time_t now = time(NULL);
+    for (int i = 0; i < 2; ++i) {
+        time_t stamp = now - i;
+        strftime(timestamp, sizeof(timestamp), "city %Y-%m-%d %H.%M.%S.png", localtime(&stamp));
+        snprintf(source, sizeof(source), "%s%s", dir, timestamp);
+        if (!rename(source, target))
+            break;
+    }
     printf("RENDER %s\n", name);
 }
+
 int main(int argc, char** argv)
 {
-    if (argc != 4) {
-        fprintf(stderr, "usage: planning-engine-tests C3_DATA_DIR ABSOLUTE_SCRATCH_DIR COPIED_SAVE\n");
+    if (argc != 4 && argc != 5) {
+        fprintf(stderr,
+            "usage: planning-engine-tests C3_DATA_DIR ABSOLUTE_SCRATCH_DIR COPIED_SAVE "
+            "[COPIED_CUSTOM_MAP]\n");
         return 2;
     }
     snprintf(scratch, sizeof(scratch), "%s", argv[2]);
@@ -125,6 +150,10 @@ int main(int argc, char** argv)
     city_finance_treasury_add(100000);
     city_view_reset_orientation();
     window_city_show();
+    city_view_go_to_grid_offset(map_grid_offset(map_data.width / 2 + 4, map_data.height / 2 + 5));
+    city_view_rotate_right();
+    test_screenshot("baseline-city-r1-no-plans");
+    city_view_rotate_left();
     /* Find a vacant district for actual construction tests, without clearing
      * anything in the fixture. All writes are confined to the scratch copy. */
     int sx = -1, sy = -1;
@@ -196,7 +225,9 @@ int main(int argc, char** argv)
         for (int z = 75; z <= 150; z += 75) {
             city_view_set_scale(z);
             planning_prepare_draw();
-            test_screenshot("rotation and zoom");
+            char label[100];
+            snprintf(label, sizeof(label), "district-r%d-z%d", r, z);
+            test_screenshot(label);
         }
         city_view_rotate_right();
     }
@@ -237,6 +268,27 @@ int main(int argc, char** argv)
     planning_undo();
     VERIFY(test_count() == 15);
     printf("PASS ENGINE: move, erase, undo preserve plan count and geometry\n");
+    VERIFY(game_file_quicksave());
+    VERIFY(game_file_make_yearly_autosave());
+    VERIFY(game_file_make_yearly_autosave());
+    const dir_listing* saves = dir_find_files_with_extension_at_location(PATH_LOCATION_SAVEGAME, "svx");
+    int checked_quick = 0, checked_backup = 0, checked_auto = 0;
+    for (int i = 0; i < saves->num_files; ++i) {
+        const char* n = saves->files[i].name;
+        char file[1200];
+        snprintf(file, sizeof(file), "%s%s",
+            platform_file_manager_get_directory_for_location(PATH_LOCATION_SAVEGAME, 0), n);
+        VERIFY(plan_storage_load(file, &test_model, map_data.width, map_data.height, BUILDING_TYPE_MAX) == 1);
+        VERIFY(test_model.count == 15);
+        if (strstr(n, "quicksave"))
+            checked_quick++;
+        if (strstr(n, "autosave-year-bak"))
+            checked_backup++;
+        if (!strcmp(n, "autosave-year.svx"))
+            checked_auto++;
+    }
+    VERIFY(checked_quick && checked_backup && checked_auto);
+    printf("PASS ENGINE: Quick Save and yearly Auto Save with rotating companions\n");
     char saved[1200];
     test_path("probe.svx", saved);
     VERIFY(game_file_load_saved_game(saved) == 1);
@@ -254,21 +306,119 @@ int main(int argc, char** argv)
     VERIFY(game_file_load_saved_game(saved) == 1);
     VERIFY(test_count() == 0);
     printf("PASS ENGINE: real city reloads with valid, missing and corrupt companion files\n");
-    /* A bridge can be planned without touching the bridge cache or city. */
+    /* Composite buildings and orientations are retained as logical objects. */
     planning_reset();
     test_toggle();
-    building_construction_set_type(BUILDING_LOW_BRIDGE, 0);
-    unsigned bridge_count = 0;
-    for (int y = 1; y < map_data.height - 1 && !bridge_count; ++y)
-        for (int x = 1; x < map_data.width - 1 && !bridge_count; ++x) {
-            if (!map_terrain_is(map_grid_offset(x, y), TERRAIN_WATER))
-                continue;
-            test_click(x, y);
-            bridge_count = test_count();
+    city_view_reset_orientation();
+    int cx = map_data.width / 2, cy = map_data.height / 2;
+    planning_test_snapshot(before);
+    const int composite_types[3] = { BUILDING_WAREHOUSE, BUILDING_FORT_LEGIONARIES, BUILDING_HIPPODROME };
+    for (int t = 0; t < 3; ++t)
+        for (int r = 0; r < 4; ++r) {
+            building_construction_set_type(composite_types[t], 0);
+            for (int i = 0; i < r; ++i)
+                building_rotation_rotate_forward();
+            test_click(cx + (t == 1 ? 10 : 0), cy + (t == 2 ? 12 : 0));
         }
-    VERIFY(bridge_count == 1);
+    VERIFY(test_count() == 12);
+    planning_test_snapshot(after);
+    VERIFY(!memcmp(before, after, 32));
+    int variants = building_variant_get_number_of_variants(BUILDING_LIBRARY);
+    if (variants > 1) {
+        building_construction_set_type(BUILDING_LIBRARY, variants - 1);
+        test_click(cx - 5, cy);
+        VERIFY(test_count() == 13);
+        VERIFY(test_model.objects[12].variant == (unsigned)variants - 1);
+    }
+    building_construction_clear_type();
     test_toggle();
-    printf("PASS ENGINE: low bridge shoreline planning\n");
+    city_view_go_to_grid_offset(map_grid_offset(cx + 4, cy + 5));
+    for (int r = 0; r < 4; ++r) {
+        city_view_set_scale(100);
+        planning_prepare_draw();
+        char label[100];
+        snprintf(label, sizeof(label), "composites-r%d", r);
+        test_screenshot(label);
+        if (r == 1) {
+            planning_key(KEY_TYPE_H, KEY_MOD_ALT, 0);
+            test_screenshot("composites-r1-hidden");
+            planning_key(KEY_TYPE_H, KEY_MOD_ALT, 0);
+        }
+        city_view_rotate_right();
+    }
+    printf("PASS ENGINE: warehouse, fort/grounds, hippodrome in four orientations and building variants\n");
+    planning_reset();
+    test_toggle();
+    city_view_reset_orientation();
+    for (int bridge = 0; bridge < 2; ++bridge) {
+        int type = bridge ? BUILDING_SHIP_BRIDGE : BUILDING_LOW_BRIDGE;
+        building_construction_set_type(type, 0);
+        int found = 0;
+        for (int y = 1; y < map_data.height - 1 && !found; ++y)
+            for (int x = 1; x < map_data.width - 1 && !found; ++x) {
+                if (!map_terrain_is(map_grid_offset(x, y), TERRAIN_WATER))
+                    continue;
+                int length, direction;
+                grid_slice blocked = { 0 };
+                if (!map_bridge_calculate_length_direction(x, y, &length, &direction, &blocked)
+                    || length >= 65 || length < (bridge ? 5 : 2))
+                    continue;
+                int cached = map_bridge_building_length();
+                test_click(x, y);
+                VERIFY(map_bridge_building_length() == cached);
+                VERIFY(test_count() == (unsigned)bridge + 1);
+                found = 1;
+            }
+        VERIFY(found);
+    }
+    test_toggle();
+    printf("PASS ENGINE: low and ship bridges without changing the real bridge cache\n");
+    /* Original and custom scenario loaders reset plans independently of .svx. */
+    VERIFY(game_file_start_scenario_by_name(string_from_ascii("Citizen.sav"))
+        || game_file_load_saved_game("Citizen.sav") == 1);
+    VERIFY(test_count() == 0);
+    printf("PASS ENGINE: original career save compatibility\n");
+    if (argc == 5) {
+        char mapfile[1400];
+        snprintf(mapfile, sizeof(mapfile), "%s/scenarios/planning-fixture.map", scratch);
+        VERIFY(platform_file_manager_copy_file(argv[4], mapfile));
+        game_campaign_clear();
+        scenario_set_campaign_mission(0);
+        scenario_set_campaign_rank(0);
+        VERIFY(game_file_start_scenario_by_name(string_from_ascii("planning-fixture")));
+        VERIFY(test_count() == 0);
+        printf("PASS ENGINE: custom map scenario compatibility\n");
+    }
+    planning_reset();
+    city_view_reset_orientation();
+    city_view_set_scale(100);
+    window_city_show();
+    int ux = map_data.width / 2, uy = map_data.height / 2, ug = map_grid_offset(ux, uy);
+    city_view_go_to_grid_offset(ug);
+    view_tile view;
+    city_view_grid_offset_to_xy_view(ug, &view.x, &view.y);
+    city_view_set_selected_view_tile(&view);
+    int px, py;
+    city_view_get_selected_tile_pixels(&px, &py);
+    hotkeys keys = { 0 };
+    mouse input = { .x = px + 29, .y = py + 14, .is_inside_window = 1, .window_has_focus = 1 };
+    test_toggle();
+    building_construction_set_type(BUILDING_WELL, 0);
+    planning_test_snapshot(before);
+    widget_city_handle_input(&input, &keys);
+    test_screenshot("input-preview");
+    input.left.went_down = 1;
+    input.left.is_down = 1;
+    widget_city_handle_input(&input, &keys);
+    input.left.went_down = 0;
+    input.left.is_down = 0;
+    input.left.went_up = 1;
+    widget_city_handle_input(&input, &keys);
+    VERIFY(test_count() == 1);
+    VERIFY(test_model.objects[0].bounds.x == ux && test_model.objects[0].bounds.y == uy);
+    planning_test_snapshot(after);
+    VERIFY(!memcmp(before, after, 32));
+    printf("PASS ENGINE: real city widget mouse input and preview preserve simulation state\n");
     puts("PASS ENGINE: all checks complete; only scratch saves were written");
     fflush(stdout);
     teardown();

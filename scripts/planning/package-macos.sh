@@ -11,6 +11,9 @@ if [[ -e "$app" ]]; then
     exit 1
 fi
 ditto "$build_dir/augustus.app" "$app"
+cp LICENSE.txt "$app/Contents/Resources/LICENSE-Augustus.txt"
+cp docs/planning/README.ru.md "$app/Contents/Resources/Planning-README.ru.md"
+cp docs/planning/VALIDATION.md "$app/Contents/Resources/Planning-VALIDATION.md"
 codesign --force --deep --options runtime --timestamp=none --sign - "$app"
 codesign --verify --deep --strict "$app"
 file "$app/Contents/MacOS/augustus" | tee "$destination/architecture.txt"
@@ -21,4 +24,4 @@ if otool -L "$app/Contents/MacOS/augustus" | grep -E '/opt/homebrew|/usr/local|/
     exit 1
 fi
 ditto -c -k --sequesterRsrc --keepParent "$app" "$destination/Augustus-Planning-macOS-arm64.zip"
-shasum -a 256 "$destination/Augustus-Planning-macOS-arm64.zip" > "$destination/SHA256SUMS"
+(cd "$destination" && shasum -a 256 Augustus-Planning-macOS-arm64.zip > SHA256SUMS)

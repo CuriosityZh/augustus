@@ -53,7 +53,8 @@ static struct {
     plan_piece pieces[PIECES];
     const char* status;
 } data = { .visible = 1, .selected = -1, .dirty = 1, .orientation = -1 };
-static int preview_drawing, preview_top, preview_x, preview_y, preview_offset;
+static int preview_drawing, preview_top, preview_x, preview_y;
+static int preview_map_x, preview_map_y;
 static color_t preview_color;
 static void invalidate(void)
 {
@@ -415,6 +416,33 @@ static void draw_piece(const plan_piece* p, int x, int y, int top, color_t color
     } else
         image_draw_isometric_footprint_from_draw_tile(p->image, x, y, color, scale);
 }
+/* The map lookup is deliberately not searched for every preview piece: a
+ * large district must remain responsive while dragging. */
+static void preview_pixels(int map_x, int map_y, int* px, int* py)
+{
+    int dx = map_x - preview_map_x, dy = map_y - preview_map_y;
+    int vx, vy;
+    switch (city_view_orientation()) {
+    case 2:
+        vx = dx + dy;
+        vy = -dx + dy;
+        break;
+    case 4:
+        vx = -dx + dy;
+        vy = -dx - dy;
+        break;
+    case 6:
+        vx = -dx - dy;
+        vy = dx - dy;
+        break;
+    default:
+        vx = dx - dy;
+        vy = dx + dy;
+        break;
+    }
+    *px = preview_x + vx * 30;
+    *py = preview_y + vy * 15;
+}
 static void piece(int x, int y, int size, int image, int bridge, int extra, int dx, int dy)
 {
     int orientation = city_view_orientation() / 2;
@@ -431,11 +459,9 @@ static void piece(int x, int y, int size, int image, int bridge, int extra, int 
         .extra_x = dx,
         .extra_y = dy };
     if (preview_drawing) {
-        int vx, vy, tx, ty;
-        city_view_grid_offset_to_xy_view(offset, &vx, &vy);
-        city_view_grid_offset_to_xy_view(preview_offset, &tx, &ty);
-        draw_piece(&p, preview_x + (vx - tx) * 60 - 30 * ((vy & 1) - (ty & 1)), preview_y + (vy - ty) * 15,
-            preview_top, preview_color);
+        int px, py;
+        preview_pixels(ax, ay, &px, &py);
+        draw_piece(&p, px, py, preview_top, preview_color);
     } else if (offset >= 0 && offset < CELLS && data.piece_count < PIECES) {
         p.next = data.heads[offset];
         data.heads[offset] = data.piece_count;
@@ -598,7 +624,8 @@ void planning_draw_preview(const map_tile* tile)
     if (!data.enabled || !tile->grid_offset || !inside(tile->x, tile->y))
         return;
     preview_drawing = 1;
-    preview_offset = tile->grid_offset;
+    preview_map_x = tile->x;
+    preview_map_y = tile->y;
     city_view_get_selected_tile_pixels(&preview_x, &preview_y);
     /* A tile's selected position is its top corner. Cache pieces use the left
      * draw tile, so the conversion below uses lookup coordinates for both. */
@@ -622,11 +649,9 @@ void planning_draw_preview(const map_tile* tile)
             for (int y = sy < tile->y ? sy : tile->y; y <= (sy > tile->y ? sy : tile->y); ++y)
                 for (int x = sx < tile->x ? sx : tile->x; x <= (sx > tile->x ? sx : tile->x); ++x)
                     if (preview_top) {
-                        int vx, vy, tx, ty;
-                        city_view_grid_offset_to_xy_view(map_grid_offset(x, y), &vx, &vy);
-                        city_view_grid_offset_to_xy_view(preview_offset, &tx, &ty);
-                        image_blend_footprint_color(preview_x + (vx - tx) * 60 - 30 * ((vy & 1) - (ty & 1)),
-                            preview_y + (vy - ty) * 15, INVALID_COLOR, city_view_get_scale() / 100.0f);
+                        int px, py;
+                        preview_pixels(x, y, &px, &py);
+                        image_blend_footprint_color(px, py, INVALID_COLOR, city_view_get_scale() / 100.0f);
                     }
         } else if (!data.tool)
             generate(0);

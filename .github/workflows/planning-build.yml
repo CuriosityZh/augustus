@@ -2,6 +2,7 @@ name: Planning Mode builds
 on:
   push:
     branches: ['feature/planning-mode', 'updates/**']
+    paths-ignore: ['**.md']
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -22,9 +23,11 @@ jobs:
       - run: cmake -S tests/planning -B build-tests -DCMAKE_BUILD_TYPE=Debug
       - run: cmake --build build-tests --parallel 2
       - run: ctest --test-dir build-tests --output-on-failure
+      - name: Exercise clean and conflicting upstream updates
+        run: python3 tests/planning/test_updater.py
   macos-arm64:
     name: macOS Apple Silicon bundle
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
         with:
