@@ -2392,6 +2392,7 @@ typedef enum {
     TR_EDITOR_TOOL_BEACH,
     TR_TERRAIN_BEACH,
     TR_TERRAIN_BEACH_DESC,
+    TR_CHEAT_FILL_MARKETS,
     TRANSLATION_MAX_KEY
 } translation_key;
 
