@@ -37,6 +37,7 @@
 #include "figuretype/water.h"
 #include "game/animation.h"
 #include "game/campaign.h"
+#include "game/cheats.h"
 #include "game/difficulty.h"
 #include "game/file_io.h"
 #include "game/settings.h"
@@ -327,6 +328,8 @@ static void initialize_saved_game(void)
     map_natives_check_land(0);
 
     city_message_clear_scroll();
+
+    game_cheat_reset_markets_filled();
 
     setting_set_default_game_speed();
 
