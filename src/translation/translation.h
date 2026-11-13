@@ -1973,8 +1973,8 @@ typedef enum {
     TR_EDITOR_HOUSE_MODEL_HEALTH,                           //
     TR_EDITOR_HOUSE_MODEL_FOOD_TYPES,                       //
     TR_EDITOR_HOUSE_MODEL_POTTERY,                          //
-    TR_EDITOR_HOUSE_MODEL_FURNITURE,                        //
     TR_EDITOR_HOUSE_MODEL_OIL,                              //
+    TR_EDITOR_HOUSE_MODEL_FURNITURE,                        //
     TR_EDITOR_HOUSE_MODEL_WINE,                             //
     TR_EDITOR_HOUSE_MODEL_PROSPERITY,                       //
     TR_EDITOR_HOUSE_MODEL_MAX_PEOPLE,                       //
@@ -1990,8 +1990,8 @@ typedef enum {
     TR_EDITOR_HOUSE_MODEL_EXPLANATION_HEALTH,               //
     TR_EDITOR_HOUSE_MODEL_EXPLANATION_FOOD_TYPES,           //
     TR_EDITOR_HOUSE_MODEL_EXPLANATION_POTTERY,              //
-    TR_EDITOR_HOUSE_MODEL_EXPLANATION_FURNITURE,            //
     TR_EDITOR_HOUSE_MODEL_EXPLANATION_OIL,                  //
+    TR_EDITOR_HOUSE_MODEL_EXPLANATION_FURNITURE,            //
     TR_EDITOR_HOUSE_MODEL_EXPLANATION_WINE,                 //
     TR_EDITOR_HOUSE_MODEL_EXPLANATION_PROSPERITY,           //
     TR_EDITOR_HOUSE_MODEL_EXPLANATION_MAX_PEOPLE,           //
@@ -2392,6 +2392,10 @@ typedef enum {
     TR_EDITOR_TOOL_BEACH,
     TR_TERRAIN_BEACH,
     TR_TERRAIN_BEACH_DESC,
+    TR_CHEAT_FILL_MARKETS,
+    TR_PARAMETER_TERRAIN_SHALLOW_WATER,
+    TR_PARAMETER_TERRAIN_MARSHLAND,
+    TR_PARAMETER_TERRAIN_BEACH,
     TRANSLATION_MAX_KEY
 } translation_key;
 
